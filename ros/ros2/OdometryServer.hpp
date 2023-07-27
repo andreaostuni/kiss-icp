@@ -31,6 +31,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "tf2_ros/transform_broadcaster.h"
+#include "native_adapters/PCL.hpp"
 
 namespace kiss_icp_ros {
 
@@ -41,8 +42,9 @@ public:
     explicit OdometryServer(const rclcpp::NodeOptions &options);
 
 private:
+    using Adapter = rclcpp::adapt_type<StampedPointCloud_PCL>::as<sensor_msgs::msg::PointCloud2>;
     /// Register new frame
-    void RegisterFrame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
+    void RegisterFrame(const StampedPointCloud_PCL::ConstSharedPtr msg);
 
 private:
     /// Ros node stuff
@@ -54,13 +56,13 @@ private:
     bool publish_alias_tf_;
 
     /// Data subscribers.
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
+    rclcpp::Subscription<Adapter>::SharedPtr pointcloud_sub_;
 
     /// Data publishers.
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr frame_publisher_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr kpoints_publisher_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_publisher_;
+    rclcpp::Publisher<Adapter>::SharedPtr frame_publisher_;
+    rclcpp::Publisher<Adapter>::SharedPtr kpoints_publisher_;
+    rclcpp::Publisher<Adapter>::SharedPtr map_publisher_;
 
     /// Path publisher
     nav_msgs::msg::Path path_msg_;

@@ -74,16 +74,16 @@ OdometryServer::OdometryServer(const rclcpp::NodeOptions &options)
     odometry_ = kiss_icp::pipeline::KissICP(config_);
 
     // Intialize subscribers
-    pointcloud_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
+    pointcloud_sub_ = create_subscription<Adapter>(
         "pointcloud_topic", rclcpp::SensorDataQoS(),
         std::bind(&OdometryServer::RegisterFrame, this, std::placeholders::_1));
 
     // Intialize publishers
     rclcpp::QoS qos(rclcpp::KeepLast{queue_size_});
     odom_publisher_ = create_publisher<nav_msgs::msg::Odometry>("odometry", qos);
-    frame_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("frame", qos);
-    kpoints_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("keypoints", qos);
-    map_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("local_map", qos);
+    frame_publisher_ = create_publisher<Adapter>("frame", qos);
+    kpoints_publisher_ = create_publisher<Adapter>("keypoints", qos);
+    map_publisher_ = create_publisher<Adapter>("local_map", qos);
 
     // Initialize the transform broadcaster
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
@@ -121,8 +121,8 @@ OdometryServer::OdometryServer(const rclcpp::NodeOptions &options)
     RCLCPP_INFO(this->get_logger(), "KISS-ICP ROS 2 odometry node initialized");
 }
 
-void OdometryServer::RegisterFrame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
-    const auto points = PointCloud2ToEigen(msg);
+void OdometryServer::RegisterFrame(const StampedPointCloud_PCL::ConstSharedPtr msg) {
+    const auto points = PointCloud2ToEigen(msg); 
     const auto timestamps = [&]() -> std::vector<double> {
         if (!config_.deskew) return {};
         return GetTimestamps(msg);

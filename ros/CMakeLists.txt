@@ -71,6 +71,7 @@ elseif("$ENV{ROS_VERSION}" STREQUAL "2")
   find_package(rclcpp_components REQUIRED)
   find_package(sensor_msgs REQUIRED)
   find_package(tf2_ros REQUIRED)
+  find_package(native_adapters REQUIRED)
 
   # ROS 2 node
   add_library(odometry_component SHARED ros2/OdometryServer.cpp)
@@ -82,6 +83,7 @@ elseif("$ENV{ROS_VERSION}" STREQUAL "2")
     rcutils
     rclcpp
     rclcpp_components
+    native_adapters
     nav_msgs
     sensor_msgs
     tf2_ros)
