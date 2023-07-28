@@ -104,12 +104,12 @@ constexpr double ESTIMATION_THRESHOLD_ = 0.0001;
 
 namespace kiss_icp {
 
-Sophus::SE3d RegisterFrame(const std::vector<Eigen::Vector3d> &frame,
+std::tuple<Sophus::SE3d,Eigen::Matrix6d> RegisterFrame(const std::vector<Eigen::Vector3d> &frame,
                            const VoxelHashMap &voxel_map,
                            const Sophus::SE3d &initial_guess,
                            double max_correspondence_distance,
                            double kernel) {
-    if (voxel_map.Empty()) return initial_guess;
+    if (voxel_map.Empty()) return {initial_guess, Eigen::Matrix6d()};
 
     // Equation (9)
     std::vector<Eigen::Vector3d> source = frame;
@@ -129,8 +129,57 @@ Sophus::SE3d RegisterFrame(const std::vector<Eigen::Vector3d> &frame,
         // Termination criteria
         if (estimation.log().norm() < ESTIMATION_THRESHOLD_) break;
     }
-    // Spit the final transformation
-    return T_icp * initial_guess;
-}
+    // Estimate covariance of the measurement
+    const auto &[final_src, final_tgt] = voxel_map.GetCorrespondences(source, max_correspondence_distance);
+    const double measurement_covariance = tbb::parallel_reduce(
+        // Range
+        tbb::blocked_range<size_t>{0, source.size()},
+        // Identity
+        0.f,
+        // 1st Lambda: Parallel computation
+        [&](const tbb::blocked_range<size_t> &r, double measure_cov) -> double {
+            for (auto i = r.begin(); i < r.end(); ++i) {
+                const Eigen::Vector3d residual = final_src[i] - final_tgt[i];
+                // TODO: compute normal here (to parallelize)
+                measure_cov += residual.squaredNorm();
+            }
+            return measure_cov / static_cast<double>(source.size());
+        },
+        // 2nd Lambda: Parallel reduction 
+        [&](double a, const double &b) -> double { return a + b; });
+    
+    // Estimate covariance of the ICP
+    // TODO: improve data storages 
+    
+    // initialize to 10^6
+    Eigen::Matrix6d P = Eigen::Matrix6d::Identity() * 1e6;
 
+    for (size_t i = 0; i < frame.size(); ++i) {
+        // ComputeNormal(point, );
+        const Eigen::Vector3d normal = (frame[i] - final_tgt[i]).normalized();
+        // Kalman filter
+        // compute point rotation
+        const Eigen::Vector3d v = T_icp.so3() * final_tgt[i];
+
+        Eigen::Matrix3d m_r1;
+        Eigen::Matrix3d m_r2;
+        Eigen::Matrix3d m_r3;
+        m_r1 << 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -1.0, 0.0;
+        m_r2 << 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
+        m_r3 << 0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+
+        const Eigen::Vector3d d_r1 = m_r1 * v;
+        const Eigen::Vector3d d_r2 = m_r2 * v;
+        const Eigen::Vector3d d_r3 = m_r2 * v;
+
+        const Eigen::Vector6d H = {normal[0], normal[1], normal[2], (d_r1.transpose() * normal), (d_r2.transpose() * normal), (d_r3.transpose() * normal)};
+        const double S = H.transpose() * P * H + measurement_covariance;
+        const Eigen::Vector6d K = P * H / S;
+
+        // Update covariance
+        P = (Eigen::Matrix6d::Identity() - K * H.transpose()) * P;
+    }
+    // Spit the final transformation
+    return {T_icp * initial_guess, P};
+}
 }  // namespace kiss_icp

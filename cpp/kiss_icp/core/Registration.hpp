@@ -28,9 +28,14 @@
 
 #include "VoxelHashMap.hpp"
 
+namespace Eigen {
+using Matrix6d = Eigen::Matrix<double, 6, 6>;
+using Matrix3_6d = Eigen::Matrix<double, 3, 6>;
+using Vector6d = Eigen::Matrix<double, 6, 1>;
+}  // namespace Eigen
 namespace kiss_icp {
 
-Sophus::SE3d RegisterFrame(const std::vector<Eigen::Vector3d> &frame,
+std::tuple<Sophus::SE3d,Eigen::Matrix6d> RegisterFrame(const std::vector<Eigen::Vector3d> &frame,
                            const VoxelHashMap &voxel_map,
                            const Sophus::SE3d &initial_guess,
                            double max_correspondence_distance,

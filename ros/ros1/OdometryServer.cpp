@@ -119,6 +119,7 @@ void OdometryServer::RegisterFrame(const sensor_msgs::PointCloud2::ConstPtr &msg
 
     // PublishPose
     const auto pose = odometry_.poses().back();
+    const auto pose_covariance = odometry_.poses_covariance().back();
 
     // Convert from Eigen to ROS types
     const Eigen::Vector3d t_current = pose.translation();
@@ -159,6 +160,7 @@ void OdometryServer::RegisterFrame(const sensor_msgs::PointCloud2::ConstPtr &msg
     odom_msg->header = pose_msg.header;
     odom_msg->child_frame_id = child_frame_;
     odom_msg->pose.pose = pose_msg.pose;
+    std::copy(pose_covariance.data(), pose_covariance.data() + 36, odom_msg->pose.covariance.begin());
     odom_publisher_.publish(*std::move(odom_msg));
 
     // Publish KISS-ICP internal data, just for debugging

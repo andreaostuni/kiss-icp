@@ -29,6 +29,9 @@
 #include "kiss_icp/core/Threshold.hpp"
 #include "kiss_icp/core/VoxelHashMap.hpp"
 
+namespace Eigen {
+using Matrix6d = Eigen::Matrix<double, 6, 6>;
+}
 namespace kiss_icp::pipeline {
 
 struct KISSConfig {
@@ -72,10 +75,12 @@ public:
     // Extra C++ API to facilitate ROS debugging
     std::vector<Eigen::Vector3d> LocalMap() const { return local_map_.Pointcloud(); };
     std::vector<Sophus::SE3d> poses() const { return poses_; };
+    std::vector<Eigen::Matrix6d> poses_covariance() const { return poses_covariance_; };
 
 private:
     // KISS-ICP pipeline modules
     std::vector<Sophus::SE3d> poses_;
+    std::vector<Eigen::Matrix6d> poses_covariance_;
     KISSConfig config_;
     VoxelHashMap local_map_;
     AdaptiveThreshold adaptive_threshold_;

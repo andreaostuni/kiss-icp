@@ -26,6 +26,7 @@
 #include <Eigen/Core>
 #include <tuple>
 #include <vector>
+#include <iostream>
 
 #include "kiss_icp/core/Deskew.hpp"
 #include "kiss_icp/core/Preprocessing.hpp"
@@ -68,7 +69,7 @@ KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vec
     const auto initial_guess = last_pose * prediction;
 
     // Run icp
-    const Sophus::SE3d new_pose = kiss_icp::RegisterFrame(source,         //
+    auto [new_pose, covariance] = kiss_icp::RegisterFrame(source,         //
                                                           local_map_,     //
                                                           initial_guess,  //
                                                           3.0 * sigma,    //
@@ -77,6 +78,9 @@ KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vec
     adaptive_threshold_.UpdateModelDeviation(model_deviation);
     local_map_.Update(frame_downsample, new_pose);
     poses_.push_back(new_pose);
+    poses_covariance_.push_back(covariance);
+    // std::cout << "New pose: " << new_pose.translation().transpose() << std::endl;
+    std::cout << "covariance: " << std::endl << covariance << std::endl;
     return {frame, source};
 }
 
