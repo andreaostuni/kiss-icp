@@ -56,7 +56,7 @@ OdometryServer::OdometryServer(const rclcpp::NodeOptions &options)
     child_frame_ = declare_parameter<std::string>("child_frame", child_frame_);
     odom_frame_ = declare_parameter<std::string>("odom_frame", odom_frame_);
     publish_alias_tf_ = declare_parameter<bool>("publish_alias_tf", publish_alias_tf_);
-    publish_odom_tf_ = declare_parameter<bool>("publish_odom_tf", publish_alias_tf_);
+    publish_odom_tf_ = declare_parameter<bool>("publish_odom_tf", publish_odom_tf_);
     config_.max_range = declare_parameter<double>("max_range", config_.max_range);
     config_.min_range = declare_parameter<double>("min_range", config_.min_range);
     config_.deskew = declare_parameter<bool>("deskew", config_.deskew);
@@ -174,7 +174,19 @@ void OdometryServer::RegisterFrame(const StampedPointCloud_PCL::ConstSharedPtr m
     odom_msg->header = pose_msg.header;
     odom_msg->child_frame_id = child_frame_;
     odom_msg->pose.pose = pose_msg.pose;
-    std::copy(pose_covariance.data(), pose_covariance.data() + 36, odom_msg->pose.covariance.begin());
+
+    float array_covariance[36];
+    std::copy(pose_covariance.data(), pose_covariance.data() + 36, std::begin(array_covariance));
+    for (int i = 0; i < 36; i++)
+        {std::stringstream stream;
+        stream << std::scientific << std::setprecision(3) << array_covariance[i];
+        stream >> array_covariance[i];}
+    for (int i = 0; i < 36; i++){
+        if (i % 6 == 0)
+            std::cout << std::endl;
+        odom_msg->pose.covariance[i] = array_covariance[i];
+    }
+
     odom_publisher_->publish(std::move(odom_msg));
 
     // Publish KISS-ICP internal data, just for debugging

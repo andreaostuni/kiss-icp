@@ -78,9 +78,37 @@ KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vec
     adaptive_threshold_.UpdateModelDeviation(model_deviation);
     local_map_.Update(frame_downsample, new_pose);
     poses_.push_back(new_pose);
+    //
+    auto matrixB = Eigen::Matrix6d::Identity() * 1e-3;
+    auto abs_array = covariance.array().abs();
+    auto conditionMatrix = abs_array <  1e-5;
+
+    // m = (m.array() >= 5).select(-m, m);
+
+    covariance = conditionMatrix.select(matrixB, covariance); // if conditionMatrix is true, then set to matrixB, else set to covariance
+    
+    // Print some info
+    std::cout << "####################" << std::endl;
+    auto eigenvalues = covariance.eigenvalues().real();
+    std::cout << "eigenvalues: " << std::endl << eigenvalues << std::endl;
+    std::cout << "####################" << std::endl;
+    if(eigenvalues.minCoeff() < 0.0){
+        std::cout << "eigenvalues are negative" << std::endl;
+    }
+    else{
+        std::cout << "eigenvalues are positive" << std::endl;
+    }
     poses_covariance_.push_back(covariance);
-    // std::cout << "New pose: " << new_pose.translation().transpose() << std::endl;
     std::cout << "covariance: " << std::endl << covariance << std::endl;
+    std::cout << "####################" << std::endl;
+    
+    // check if covariance is symmetric
+    if(covariance.isApprox(covariance.transpose(), 1e-4)){
+        std::cout << "covariance is symmetric" << std::endl;
+    }
+    else{
+        std::cout << "covariance is not symmetric" << std::endl;
+    }
     return {frame, source};
 }
 

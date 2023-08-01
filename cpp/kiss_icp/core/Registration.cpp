@@ -29,6 +29,8 @@
 #include <cmath>
 #include <sophus/se3.hpp>
 #include <sophus/so3.hpp>
+#include <iostream>
+#include <iomanip> // For std::setprecision
 #include <tuple>
 
 namespace Eigen {
@@ -164,21 +166,21 @@ std::tuple<Sophus::SE3d,Eigen::Matrix6d> RegisterFrame(const std::vector<Eigen::
         Eigen::Matrix3d m_r1;
         Eigen::Matrix3d m_r2;
         Eigen::Matrix3d m_r3;
-        m_r1 << 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -1.0, 0.0;
-        m_r2 << 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
-        m_r3 << 0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+        m_r1 << 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f;
+        m_r2 << 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f;
+        m_r3 << 0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f;
 
         const Eigen::Vector3d d_r1 = m_r1 * v;
         const Eigen::Vector3d d_r2 = m_r2 * v;
-        const Eigen::Vector3d d_r3 = m_r2 * v;
+        const Eigen::Vector3d d_r3 = m_r3 * v;
 
         const Eigen::Vector6d H = {normal[0], normal[1], normal[2], (d_r1.transpose() * normal), (d_r2.transpose() * normal), (d_r3.transpose() * normal)};
         const double S = H.transpose() * P * H + measurement_covariance;
-        const Eigen::Vector6d K = P * H / S;
+        const Eigen::Vector6d K = (P * H) / S;
 
         // Update covariance
         P = (Eigen::Matrix6d::Identity() - K * H.transpose()) * P;
-    }
+    }   
     // Spit the final transformation
     return {T_icp * initial_guess, P};
 }
