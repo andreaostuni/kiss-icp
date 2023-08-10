@@ -68,6 +68,8 @@ OdometryServer::OdometryServer(const rclcpp::NodeOptions &options)
         RCLCPP_WARN(get_logger(), "[WARNING] max_range is smaller than min_range, settng min_range to 0.0");
         config_.min_range = 0.0;
     }
+    config_.cov_lower_treshold = declare_parameter<double>("cov_lower_treshold", config_.cov_lower_treshold);
+    config_.cov_default_value = declare_parameter<std::vector<double>>("cov_default_value", config_.cov_default_value);
     // clang-format on
 
     // Construct the main KISS-ICP odometry node

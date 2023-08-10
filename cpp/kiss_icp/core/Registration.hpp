@@ -39,5 +39,7 @@ std::tuple<Sophus::SE3d,Eigen::Matrix6d> RegisterFrame(const std::vector<Eigen::
                            const VoxelHashMap &voxel_map,
                            const Sophus::SE3d &initial_guess,
                            double max_correspondence_distance,
-                           double kernel);
+                           double kernel,
+                           double cov_lower_treshold,
+                           std::vector<double> &cov_default_value);
 }  // namespace kiss_icp

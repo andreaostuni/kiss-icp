@@ -47,6 +47,12 @@ struct KISSConfig {
 
     // Motion compensation
     bool deskew = false;
+
+    // covariance params
+    double cov_lower_treshold = 1e-5;
+    //TODO: convert this into an array
+    // double cov_default_value = 1e-3;
+    std::vector<double> cov_default_value {1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3};
 };
 
 class KissICP {

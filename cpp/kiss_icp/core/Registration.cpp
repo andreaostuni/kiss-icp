@@ -37,6 +37,7 @@ namespace Eigen {
 using Matrix6d = Eigen::Matrix<double, 6, 6>;
 using Matrix3_6d = Eigen::Matrix<double, 3, 6>;
 using Vector6d = Eigen::Matrix<double, 6, 1>;
+using Array6d = Eigen::Array<double, 6, 1>;
 }  // namespace Eigen
 
 namespace {
@@ -99,6 +100,17 @@ Sophus::SE3d AlignClouds(const std::vector<Eigen::Vector3d> &source,
     return Sophus::SE3d::exp(x);
 }
 
+void ProcessCovarianceMatrix(Eigen::Matrix6d& covariance, 
+                           double lower_treshold,
+                           std::vector<double>& default_value) {
+    const Eigen::Array6d v (default_value.data());
+    const auto matrixB = Eigen::Matrix6d::Identity().array().colwise() * v;
+    const auto conditionMatrix = covariance.array().abs() <  lower_treshold;
+    // if conditionMatrix is true, then set to matrixB, else set to covariance
+    covariance = conditionMatrix.select(matrixB, covariance);
+    covariance = covariance.selfadjointView<Eigen::Lower>(); 
+}
+
 constexpr int MAX_NUM_ITERATIONS_ = 500;
 constexpr double ESTIMATION_THRESHOLD_ = 0.0001;
 
@@ -110,7 +122,9 @@ std::tuple<Sophus::SE3d,Eigen::Matrix6d> RegisterFrame(const std::vector<Eigen::
                            const VoxelHashMap &voxel_map,
                            const Sophus::SE3d &initial_guess,
                            double max_correspondence_distance,
-                           double kernel) {
+                           double kernel,
+                           double cov_lower_treshold,
+                           std::vector<double> &cov_default_value) {
     if (voxel_map.Empty()) return {initial_guess, Eigen::Matrix6d()};
 
     // Equation (9)
@@ -180,7 +194,14 @@ std::tuple<Sophus::SE3d,Eigen::Matrix6d> RegisterFrame(const std::vector<Eigen::
 
         // Update covariance
         P = (Eigen::Matrix6d::Identity() - K * H.transpose()) * P;
-    }   
+    }
+    
+    ProcessCovarianceMatrix(P, cov_lower_treshold, cov_default_value);
+    // for (int i = 0; i < 36; i++){
+    //     if (i % 6 == 0)
+    //         std::cout << std::endl;
+    //     std::cout << P(i) << "\t";
+    // }
     // Spit the final transformation
     return {T_icp * initial_guess, P};
 }
